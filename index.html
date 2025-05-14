@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Shop Admin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-storage-compat.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-gray-800 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Titanic Shop Admin</h1>
+            <a href="store.html" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Visit Store</a>
+        </div>
+    </nav>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="container mx-auto p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <ul>
+                    <li class="mb-2">
+                        <button id="productsTab" class="w-full text-left py-2 px-4 bg-blue-100 rounded">Products</button>
+                    </li>
+                    <li class="mb-2">
+                        <button id="ordersTab" class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">Orders</button>
+                    </li>
+                    <li class="mb-2">
+                        <button id="statisticsTab" class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">Statistics</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <!-- Products Section -->
+                <div id="productsSection" class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">Products</h2>
+                        <button id="addProductBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Add Product</button>
+                    </div>
+                    
+                    <div id="productsList" class="mb-6"></div>
+                    
+                    <!-- Add/Edit Product Form -->
+                    <div id="productForm" class="border p-4 rounded-lg hidden">
+                        <h3 id="formTitle" class="text-lg font-bold mb-4">Add New Product</h3>
+                        <input type="hidden" id="productId">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block mb-2">Product Name</label>
+                                <input id="productName" type="text" class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block mb-2">Price ($)</label>
+                                <input id="productPrice" type="number" step="0.01" class="w-full p-2 border rounded">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block mb-2">Description</label>
+                            <textarea id="productDescription" class="w-full p-2 border rounded" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block mb-2">Image URL</label>
+                            <input id="productImage" type="text" class="w-full p-2 border rounded" placeholder="https://example.com/image.jpg">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block mb-2">Category</label>
+                                <select id="productCategory" class="w-full p-2 border rounded">
+                                    <option value="electronics">Electronics</option>
+                                    <option value="clothing">Clothing</option>
+                                    <option value="home">Home & Kitchen</option>
+                                    <option value="books">Books</option>
+                                    <option value="toys">Toys</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block mb-2">Stock Quantity</label>
+                                <input id="productStock" type="number" class="w-full p-2 border rounded" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2">
+                            <button id="cancelProductBtn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">Cancel</button>
+                            <button id="saveProductBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save Product</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Orders Section -->
+                <div id="ordersSection" class="bg-white p-6 rounded-lg shadow-md hidden">
+                    <h2 class="text-xl font-bold mb-6">Orders</h2>
+                    <div class="mb-4">
+                        <select id="orderFilter" class="p-2 border rounded">
+                            <option value="all">All Orders</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div id="ordersList"></div>
+                    
+                    <!-- Order Details Modal -->
+                    <div id="orderModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+                        <div class="bg-white p-6 rounded-lg max-w-2xl w-full">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-bold">Order Details</h2>
+                                <button id="closeOrderModal" class="text-xl">&times;</button>
+                            </div>
+                            <div id="orderDetails" class="mb-4"></div>
+                            <div class="flex justify-between">
+                                <div>
+                                    <label class="block mb-2">Status:</label>
+                                    <select id="orderStatus" class="p-2 border rounded">
+                                        <option value="pending">Pending</option>
+                                        <option value="processing">Processing</option>
+                                        <option value="shipped">Shipped</option>
+                                        <option value="delivered">Delivered</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <button id="updateOrderBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Update Status</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics Section -->
+                <div id="statisticsSection" class="bg-white p-6 rounded-lg shadow-md hidden">
+                    <h2 class="text-xl font-bold mb-6">Statistics</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-blue-100 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-2">Total Products</h3>
+                            <p id="totalProducts" class="text-3xl font-bold">0</p>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-2">Total Orders</h3>
+                            <p id="totalOrders" class="text-3xl font-bold">0</p>
+                        </div>
+                        <div class="bg-purple-100 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-2">Total Revenue</h3>
+                            <p id="totalRevenue" class="text-3xl font-bold">$0.00</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-2">Top Selling Products</h3>
+                        <div id="topProducts" class="bg-gray-50 p-4 rounded-lg"></div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Recent Activity</h3>
+                        <div id="recentActivity" class="bg-gray-50 p-4 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDY3Y9uwQMFEeZQfLE09PrpbYmld02giZQ",
+            authDomain: "titanic-shop.firebaseapp.com",
+            databaseURL: "https://titanic-shop-default-rtdb.firebaseio.com",
+            projectId: "titanic-shop",
+            storageBucket: "titanic-shop.appspot.com",
+            messagingSenderId: "552361007073",
+            appId: "1:552361007073:web:bf7c506205e1aa6aada4a0"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // DOM Elements - Tab Navigation
+        const productsTab = document.getElementById('productsTab');
+        const ordersTab = document.getElementById('ordersTab');
+        const statisticsTab = document.getElementById('statisticsTab');
+        const productsSection = document.getElementById('productsSection');
+        const ordersSection = document.getElementById('ordersSection');
+        const statisticsSection = document.getElementById('statisticsSection');
+        
+        // Products Elements
+        const productsList = document.getElementById('productsList');
+        const addProductBtn = document.getElementById('addProductBtn');
+        const productForm = document.getElementById('productForm');
+        const formTitle = document.getElementById('formTitle');
+        const productId = document.getElementById('productId');
+        const productName = document.getElementById('productName');
+        const productPrice = document.getElementById('productPrice');
+        const productDescription = document.getElementById('productDescription');
+        const productImage = document.getElementById('productImage');
+        const productCategory = document.getElementById('productCategory');
+        const productStock = document.getElementById('productStock');
+        const saveProductBtn = document.getElementById('saveProductBtn');
+        const cancelProductBtn = document.getElementById('cancelProductBtn');
+        
+        // Orders Elements
+        const ordersList = document.getElementById('ordersList');
+        const orderFilter = document.getElementById('orderFilter');
+        const orderModal = document.getElementById('orderModal');
+        const closeOrderModal = document.getElementById('closeOrderModal');
+        const orderDetails = document.getElementById('orderDetails');
+        const orderStatus = document.getElementById('orderStatus');
+        const updateOrderBtn = document.getElementById('updateOrderBtn');
+        
+        // Statistics Elements
+        const totalProducts = document.getElementById('totalProducts');
+        const totalOrders = document.getElementById('totalOrders');
+        const totalRevenue = document.getElementById('totalRevenue');
+        const topProducts = document.getElementById('topProducts');
+        const recentActivity = document.getElementById('recentActivity');
+        
+        // Current order ID being viewed
+        let currentOrderId = null;
+        
+        // Load initial data
+        loadProducts();
+        
+        // ===== Tab Navigation =====
+        
+        productsTab.addEventListener('click', () => {
+            showTab(productsTab, productsSection);
+            loadProducts();
+        });
+        
+        ordersTab.addEventListener('click', () => {
+            showTab(ordersTab, ordersSection);
+            loadOrders();
+        });
+        
+        statisticsTab.addEventListener('click', () => {
+            showTab(statisticsTab, statisticsSection);
+            loadStatistics();
+        });
+        
+        function showTab(tabButton, tabSection) {
+            // Reset tab styling
+            [productsTab, ordersTab, statisticsTab].forEach(tab => {
+                tab.classList.remove('bg-blue-100');
+                tab.classList.add('hover:bg-gray-100');
+            });
+            
+            // Reset section visibility
+            [productsSection, ordersSection, statisticsSection].forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Set active tab
+            tabButton.classList.add('bg-blue-100');
+            tabButton.classList.remove('hover:bg-gray-100');
+            
+            // Show active section
+            tabSection.classList.remove('hidden');
+        }
+        
+        // ===== Products Management =====
+        
+        // Load Products
+        function loadProducts() {
+            productsList.innerHTML = '<p class="text-center">Loading products...</p>';
+            
+            firebase.database().ref('products').once('value')
+                .then((snapshot) => {
+                    const products = snapshot.val();
+                    productsList.innerHTML = '';
+                    
+                    if (!products) {
+                        productsList.innerHTML = '<p class="text-center">No products found. Add some products to get started.</p>';
+                        return;
+                    }
+                    
+                    const table = document.createElement('table');
+                    table.className = 'min-w-full divide-y divide-gray-200';
+                    
+                    // Table header
+                    const thead = document.createElement('thead');
+                    thead.className = 'bg-gray-50';
+                    thead.innerHTML = `
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    `;
+                    
+                    // Table body
+                    const tbody = document.createElement('tbody');
+                    tbody.className = 'bg-white divide-y divide-gray-200';
+                    
+                    Object.keys(products).forEach(key => {
+                        const product = products[key];
+                        const tr = document.createElement('tr');
+                        
+                        tr.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <img class="h-10 w-10 rounded-full object-cover" src="${product.imageUrl || '/api/placeholder/100/100'}" alt="${product.name}">
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                                        <div class="text-sm text-gray-500">${product.description ? product.description.substring(0, 30) + (product.description.length > 30 ? '...' : '') : ''}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">$${parseFloat(product.price).toFixed(2)}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${product.category || 'N/A'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${product.stock || 'N/A'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="edit-product text-indigo-600 hover:text-indigo-900 mr-3" data-id="${key}">Edit</button>
+                                <button class="delete-product text-red-600 hover:text-red-900" data-id="${key}">Delete</button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(tr);
+                    });
+                    
+                    table.appendChild(thead);
+                    table.appendChild(tbody);
+                    productsList.appendChild(table);
+                    
+                    // Add event listeners for edit and delete buttons
+                    document.querySelectorAll('.edit-product').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const id = e.target.getAttribute('data-id');
+                            editProduct(id, products[id]);
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete-product').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const id = e.target.getAttribute('data-id');
+                            if (confirm('Are you sure you want to delete this product?')) {
+                                deleteProduct(id);
+                            }
+                        });
+                    });
+                })
+                .catch(error => {
+                    productsList.innerHTML = `<p class="text-center text-red-500">Error loading products: ${error.message}</p>`;
+                });
+        }
+        
+        // Add Product Button Click
+        addProductBtn.addEventListener('click', () => {
+            // Reset form
+            formTitle.textContent = 'Add New Product';
+            productId.value = '';
+            productName.value = '';
+            productPrice.value = '';
+            productDescription.value = '';
+            productImage.value = '';
+            productCategory.value = 'electronics';
+            productStock.value = '0';
+            
+            // Show form
+            productForm.classList.remove('hidden');
+            addProductBtn.classList.add('hidden');
+        });
+        
+        // Cancel Product Button Click
+        cancelProductBtn.addEventListener('click', () => {
+            productForm.classList.add('hidden');
+            addProductBtn.classList.remove('hidden');
+        });
+        
+        // Save Product Button Click
+        saveProductBtn.addEventListener('click', () => {
+            // Validate inputs
+            if (!productName.value || !productPrice.value) {
+                alert('Please fill in the product name and price.');
+                return;
+            }
+            
+            const product = {
+                name: productName.value,
+                price: parseFloat(productPrice.value),
+                description: productDescription.value,
+                imageUrl: productImage.value || null,
+                category: productCategory.value,
+                stock: parseInt(productStock.value) || 0
+            };
+            
+            if (productId.value) {
+                // Update existing product
+                firebase.database().ref(`products/${productId.value}`).update(product)
+                    .then(() => {
+                        productForm.classList.add('hidden');
+                        addProductBtn.classList.remove('hidden');
+                        loadProducts();
+                    })
+                    .catch(error => {
+                        alert(`Error updating product: ${error.message}`);
+                    });
+            } else {
+                // Add new product
+                firebase.database().ref('products').push(product)
+                    .then(() => {
+                        productForm.classList.add('hidden');
+                        addProductBtn.classList.remove('hidden');
+                        loadProducts();
+                    })
+                    .catch(error => {
+                        alert(`Error adding product: ${error.message}`);
+                    });
+            }
+        });
+        
+        // Edit Product
+        function editProduct(id, product) {
+            formTitle.textContent = 'Edit Product';
+            productId.value = id;
+            productName.value = product.name;
+            productPrice.value = product.price;
+            productDescription.value = product.description || '';
+            productImage.value = product.imageUrl || '';
+            productCategory.value = product.category || 'electronics';
+            productStock.value = product.stock || 0;
+            
+            productForm.classList.remove('hidden');
+            addProductBtn.classList.add('hidden');
+        }
+        
+        // Delete Product
+        function deleteProduct(id) {
+            firebase.database().ref(`products/${id}`).remove()
+                .then(() => {
+                    loadProducts();
+                })
+                .catch(error => {
+                    alert(`Error deleting product: ${error.message}`);
+                });
+        }
+        
+        // ===== Orders Management =====
+        
+        // Load Orders
+        function loadOrders() {
+            ordersList.innerHTML = '<p class="text-center">Loading orders...</p>';
+            
+            firebase.database().ref('orders').once('value')
+                .then((snapshot) => {
+                    const orders = snapshot.val();
+                    ordersList.innerHTML = '';
+                    
+                    if (!orders) {
+                        ordersList.innerHTML = '<p class="text-center">No orders found.</p>';
+                        return;
+                    }
+                    
+                    const filterValue = orderFilter.value;
+                    
+                    const table = document.createElement('table');
+                    table.className = 'min-w-full divide-y divide-gray-200';
+                    
+                    // Table header
+                    const thead = document.createElement('thead');
+                    thead.className = 'bg-gray-50';
+                    thead.innerHTML = `
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    `;
+                    
+                    // Table body
+                    const tbody = document.createElement('tbody');
+                    tbody.className = 'bg-white divide-y divide-gray-200';
+                    
+                    Object.keys(orders).forEach(key => {
+                        const order = orders[key];
+                        
+                        // Apply filter
+                        if (filterValue !== 'all' && order.status !== filterValue) {
+                            return;
+                        }
+                        
+                        const tr = document.createElement('tr');
+                        const date = new Date(order.createdAt);
+                        
+                        tr.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">#${key.substring(0, 8)}...</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${order.userEmail || 'Guest'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${date.toLocaleDateString()}</div>
+                                <div class="text-sm text-gray-500">${date.toLocaleTimeString()}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">$${order.total.toFixed(2)}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                    ${order.status === 'processing' ? 'bg-blue-100 text-blue-800' : ''}
+                                    ${order.status === 'shipped' ? 'bg-indigo-100 text-indigo-800' : ''}
+                                    ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : ''}
+                                    ${order.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                ">
+                                    ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="view-order text-indigo-600 hover:text-indigo-900" data-id="${key}">View Details</button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(tr);
+                    });
+                    
+                    table.appendChild(thead);
+                    table.appendChild(tbody);
+                    ordersList.appendChild(table);
+                    
+                    // Add event listeners for view order buttons
+                    document.querySelectorAll('.view-order').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const id = e.target.getAttribute('data-id');
+                            viewOrder(id, orders[id]);
+                        });
+                    });
+                })
+                .catch(error => {
+                    ordersList.innerHTML = `<p class="text-center text-red-500">Error loading orders: ${error.message}</p>`;
+                });
+        }
+        
+        // Order filter change
+        orderFilter.addEventListener('change', loadOrders);
+        
+        // View Order Details
+       // View Order Details
+function viewOrder(id, order) {
+    currentOrderId = id;
+    orderStatus.value = order.status;
+    
+    const date = new Date(order.createdAt);
+    
+    // Generate order details HTML
+    let detailsHTML = `
+        <div class="mb-4">
+            <div class="flex justify-between">
+                <div>
+                    <h3 class="font-bold">Order #${id.substring(0, 8)}...</h3>
+                    <p class="text-sm text-gray-500">Placed on ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</p>
+                </div>
+                <div>
+                    <p class="font-bold">Customer: ${order.userEmail || 'Guest'}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add customer information section
+    detailsHTML += `
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h4 class="font-bold mb-2">Customer Information:</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    `;
+    
+    // If we have user ID, fetch and display their profile info
+    if (order.userId) {
+        detailsHTML += `
+                <div id="customerProfileInfo">
+                    <p class="text-center">Loading customer information...</p>
+                </div>
+                <div id="customerLocationInfo">
+                </div>
+            </div>
+        </div>
+        `;
+    } else if (order.customerInfo) {
+        // Display customer info that was saved with the order
+        detailsHTML += `
+                <div>
+                    <p><span class="font-semibold">Name:</span> ${order.customerInfo.name || 'Not provided'}</p>
+                    <p><span class="font-semibold">Email:</span> ${order.userEmail || 'Not provided'}</p>
+                    <p><span class="font-semibold">Phone:</span> ${order.customerInfo.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                    <p><span class="font-semibold">Address:</span> ${order.customerInfo.address || 'Not provided'}</p>
+                    <p><span class="font-semibold">City:</span> ${order.customerInfo.city || 'Not provided'}</p>
+                    <p><span class="font-semibold">Additional Directions:</span> ${order.customerInfo.directions || 'Not provided'}</p>
+                </div>
+            </div>
+        </div>
+        `;
+    } else {
+        detailsHTML += `
+                <div class="col-span-2">
+                    <p class="text-center">No customer information available</p>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+    
+    // Add order items table
+    detailsHTML += `
+        <h4 class="font-bold mb-2">Items:</h4>
+        <table class="min-w-full divide-y divide-gray-200 mb-4">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+    `;
+    
+    order.items.forEach(item => {
+        const subtotal = item.price * item.quantity;
+        detailsHTML += `
+            <tr>
+                <td class="px-4 py-2 text-sm text-gray-900">${item.name}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 text-right">$${item.price.toFixed(2)}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 text-right">${item.quantity}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 text-right">$${subtotal.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+    
+    detailsHTML += `
+            </tbody>
+        </table>
+        <div class="flex justify-end">
+            <div class="text-right">
+                <div class="flex justify-between mb-2">
+                    <span class="font-bold mr-8">Total:</span>
+                    <span class="font-bold">$${order.total.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    orderDetails.innerHTML = detailsHTML;
+    orderModal.classList.remove('hidden');
+    
+    // If we have a user ID, fetch their profile info
+    if (order.userId) {
+        firebase.database().ref(`users/${order.userId}/profile`).once('value')
+            .then((snapshot) => {
+                const profile = snapshot.val();
+                if (profile) {
+                    let profileHTML = `
+                        <p><span class="font-semibold">Name:</span> ${profile.fullName || 'Not provided'}</p>
+                        <p><span class="font-semibold">Email:</span> ${order.userEmail || 'Not provided'}</p>
+                        <p><span class="font-semibold">Phone:</span> ${profile.phone || 'Not provided'}</p>
+                    `;
+                    
+                    let locationHTML = `
+                        <p><span class="font-semibold">Address:</span> ${profile.address || 'Not provided'}</p>
+                        <p><span class="font-semibold">City:</span> ${profile.city || 'Not provided'}</p>
+                        <p><span class="font-semibold">Additional Directions:</span> ${profile.directions || 'Not provided'}</p>
+                    `;
+                    
+                    document.getElementById('customerProfileInfo').innerHTML = profileHTML;
+                    document.getElementById('customerLocationInfo').innerHTML = locationHTML;
+                } else {
+                    document.getElementById('customerProfileInfo').innerHTML = '<p>No profile information available</p>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('customerProfileInfo').innerHTML = '<p class="text-red-500">Error loading customer information</p>';
+                console.error("Error fetching customer profile:", error);
+            });
+    }
+}
+        
+        // Close Order Modal
+        closeOrderModal.addEventListener('click', () => {
+            orderModal.classList.add('hidden');
+            currentOrderId = null;
+        });
+        
+        // Update Order Status
+        updateOrderBtn.addEventListener('click', () => {
+            if (!currentOrderId) return;
+            
+            const newStatus = orderStatus.value;
+            
+            firebase.database().ref(`orders/${currentOrderId}`).update({
+                status: newStatus
+            })
+                .then(() => {
+                    orderModal.classList.add('hidden');
+                    loadOrders();
+                })
+                .catch(error => {
+                    alert(`Error updating order status: ${error.message}`);
+                });
+        });
+        
+        // ===== Statistics =====
+        function loadStatistics() {
+            // Load total products
+            firebase.database().ref('products').once('value')
+                .then((snapshot) => {
+                    const products = snapshot.val() || {};
+                    const count = Object.keys(products).length;
+                    totalProducts.textContent = count;
+                });
+            
+            // Load order statistics
+            firebase.database().ref('orders').once('value')
+                .then((snapshot) => {
+                    const orders = snapshot.val() || {};
+                    const orderKeys = Object.keys(orders);
+                    
+                    // Total orders
+                    totalOrders.textContent = orderKeys.length;
+                    
+                    // Total revenue
+                    let revenue = 0;
+                    let productSales = {};
+                    
+                    orderKeys.forEach(key => {
+                        const order = orders[key];
+                        if (order.status !== 'cancelled') {
+                            revenue += order.total;
+                            
+                            // Track product sales for top products
+                            if (order.items) {
+                                order.items.forEach(item => {
+                                    if (!productSales[item.id]) {
+                                        productSales[item.id] = {
+                                            name: item.name,
+                                            quantity: 0,
+                                            revenue: 0
+                                        };
+                                    }
+                                    
+                                    productSales[item.id].quantity += item.quantity;
+                                    productSales[item.id].revenue += (item.price * item.quantity);
+                                });
+                            }
+                        }
+                    });
+                    
+                    totalRevenue.textContent = `$${revenue.toFixed(2)}`;
+                    
+                    // Generate top products list
+                    const topProductsList = Object.keys(productSales)
+                        .sort((a, b) => productSales[b].quantity - productSales[a].quantity)
+                        .slice(0, 5);
+                    
+                    if (topProductsList.length > 0) {
+                        let topProductsHTML = `
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Units Sold</th>
+                                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                        `;
+                        
+                        topProductsList.forEach(id => {
+                            const product = productSales[id];
+                            topProductsHTML += `
+                                <tr>
+                                    <td class="px-4 py-2 text-sm font-medium text-gray-900">${product.name}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-500 text-right">${product.quantity}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-500 text-right">$${product.revenue.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        topProductsHTML += `
+                                </tbody>
+                            </table>
+                        `;
+                        
+                        topProducts.innerHTML = topProductsHTML;
+                    } else {
+                        topProducts.innerHTML = '<p class="text-center">No product sales data available.</p>';
+                    }
+                    
+                    // Generate recent activity
+                    const recentOrders = orderKeys
+                        .sort((a, b) => orders[b].createdAt - orders[a].createdAt)
+                        .slice(0, 5);
+                    
+                    if (recentOrders.length > 0) {
+                        let recentActivityHTML = '<ul class="divide-y divide-gray-200">';
+                        
+                        recentOrders.forEach(key => {
+                            const order = orders[key];
+                            const date = new Date(order.createdAt);
+                            const itemCount = order.items ? order.items.length : 0;
+                            const itemText = itemCount === 1 ? '1 item' : `${itemCount} items`;
+                            
+                            recentActivityHTML += `
+                                <li class="py-3">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900 truncate">
+                                                Order #${key.substring(0, 8)}...
+                                            </p>
+                                            <p class="text-sm text-gray-500 truncate">
+                                                ${order.userEmail || 'Guest'} purchased ${itemText}
+                                            </p>
+                                        </div>
+                                        <div class="inline-flex items-center text-sm text-gray-500">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                                ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                ${order.status === 'processing' ? 'bg-blue-100 text-blue-800' : ''}
+                                                ${order.status === 'shipped' ? 'bg-indigo-100 text-indigo-800' : ''}
+                                                ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : ''}
+                                                ${order.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                            ">
+                                                ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                            </span>
+                                            <span class="ml-2">
+                                                ${date.toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        
+                        recentActivityHTML += '</ul>';
+                        recentActivity.innerHTML = recentActivityHTML;
+                    } else {
+                        recentActivity.innerHTML = '<p class="text-center">No recent activity.</p>';
+                    }
+                })
+                .catch(error => {
+                    totalOrders.textContent = '0';
+                    totalRevenue.textContent = '$0.00';
+                    topProducts.innerHTML = `<p class="text-center text-red-500">Error loading data: ${error.message}</p>`;
+                    recentActivity.innerHTML = `<p class="text-center text-red-500">Error loading data: ${error.message}</p>`;
+                });
+        }
+        
+        // Initialize with default product data if needed
+        function initializeDefaultProducts() {
+            firebase.database().ref('products').once('value')
+                .then((snapshot) => {
+                    if (!snapshot.exists()) {
+                        // Store is empty, add some default products
+                        const defaultProducts = {
+                            product1: {
+                                name: 'Smartphone',
+                                price: 699.99,
+                                description: 'Latest model with high-end features and excellent camera.',
+                                imageUrl: 'https://via.placeholder.com/300',
+                                category: 'electronics',
+                                stock: 15
+                            },
+                            product2: {
+                                name: 'Laptop',
+                                price: 1299.99,
+                                description: 'Powerful laptop for work and gaming.',
+                                imageUrl: 'https://via.placeholder.com/300',
+                                category: 'electronics',
+                                stock: 8
+                            },
+                            product3: {
+                                name: 'Wireless Headphones',
+                                price: 149.99,
+                                description: 'Noise cancelling wireless headphones with long battery life.',
+                                imageUrl: 'https://via.placeholder.com/300',
+                                category: 'electronics',
+                                stock: 20
+                            },
+                            product4: {
+                                name: 'Smartwatch',
+                                price: 249.99,
+                                description: 'Track your fitness and stay connected with this smartwatch.',
+                                imageUrl: 'https://via.placeholder.com/300',
+                                category: 'electronics',
+                                stock: 12
+                            }
+                        };
+                        
+                        firebase.database().ref('products').set(defaultProducts)
+                            .then(() => {
+                                console.log('Default products added');
+                                loadProducts();
+                            })
+                            .catch(error => {
+                                console.error('Error adding default products:', error);
+                            });
+                    }
+                });
+        }
+        
+        // Call initialize function
+        initializeDefaultProducts();
+        
+        // Event listener for clicks outside modals to close them
+        window.addEventListener('click', (e) => {
+            if (e.target === orderModal) {
+                orderModal.classList.add('hidden');
+                currentOrderId = null;
+            }
+        });
+    </script>
+</body>
+</html>
