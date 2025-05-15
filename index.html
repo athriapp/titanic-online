@@ -1,0 +1,61 @@
+<html>
+    <head>
+<style>
+    body{
+        background-color: #ffffff88;
+        align-items: center;
+        text-align: center;
+        padding-top: 10%;
+    }
+    h1{
+        color: #10305f;
+        font-size: 50px;
+        margin-top: 20px;
+    }
+    input{
+        width: 300px;
+        height: 40px;
+        border-radius: 5px;
+        border: 1px solid #10305f;
+        padding-left: 10px;
+        font-size: 20px;
+    }
+    button{
+        width: 100px;
+        height: 40px;
+        border-radius: 5px;
+        border: none;
+        background-color: #10305f;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+    }
+</style>
+    </head>
+    <body>
+        <h1>MANAGEMENT INTERFACE</h1>
+         <h3>ENTER THE PASSWORD TO ACCESS THE MANAGEMENT SYSTEM</h3>
+         <input class="password" placeholder="Enter Password" type="password" id="password">
+         <button class="passbtn" onclick='enter()'>SUBMIT</button>
+
+         <script>
+            function enter(){
+
+              
+                let intropass=document.querySelector('#password').value;
+                if(intropass==='ru22sh11aa'){
+                     
+                    window.location.href='itemsadmin.html';
+                    
+                }
+                else{
+
+                    alert('access denied \n if you are having any troubles to log in contact us on whats app: 07518904095')
+
+                }
+            }
+           
+
+         </script>
+    </body>
+</html>
